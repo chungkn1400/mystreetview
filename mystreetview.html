@@ -48,6 +48,7 @@
     <div id="mapcanvas" onKeyUp="keyup(event);"  style="top:0px;left:0px;height:96%;width:100%;"></div>
 	</div>
 	<script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+    <script src="vk_keys.js"></script>
     <script>
 try{if(localStorage){};}catch(e){localStorage=null;};
 function subhelp(){
@@ -57,10 +58,11 @@ msg+="M => map"+crlf;
 msg+="esc => quit"+crlf;
 msg+="arrow keys => rotate,move"+crlf;
 msg+="pageup/pagedown => look up/down"+crlf;
+msg+="B,N  => zoom out/in"+crlf;
 msg+="back => return previous locations"+crlf;
 msg+="link => create in adress bar a link for later return to position"+crlf;  
 msg+=" "+crlf;
-msg+="map: click on map to teleport"+crlf;
+msg+="M map: click on map to teleport"+crlf;
 msg+="     mouse wheel => zoom in/out	"+crlf;
 msg+="     blue lines indicate roads covered by streetview"+crlf;
 alert(msg);	 
@@ -151,13 +153,16 @@ function initialize() {
   //panorama.setVisible(true); 
   initmap();
   setxy();
+  latsave=lat1;logsave=log1;
   savestorage();
 }
+var latsave=0,logsave=0;
 function savestorage(){
 //try{
+    if(latsave==0 && logsave==0){latsave=lat1;logsave=log1;}
     if(localStorage){
-	   localStorage.setItem("mystreetview_lat",lat1);
-	   localStorage.setItem("mystreetview_log",log1);
+	   localStorage.setItem("mystreetview_lat",latsave);
+	   localStorage.setItem("mystreetview_log",logsave);
 	   localStorage.setItem("mystreetview_o1",o1);
 	   }
 //}catch(e){}
@@ -204,6 +209,10 @@ if(key>0 && key<256){keys[key]=0;keys0[key]=0;}
 var t=timer();
 for(var i=33;i<=40;i++){if(tkeys[i]<(t-3000)){keys[i]=0;keys0[i]=0;};}
 }
+function resetkeys(){
+ for(var i=0;i<256;i++){keys[i]=0;keys0[i]=0;tkeys[i]=0;}
+}
+resetkeys();
 var tpano=null,tpano0=null;
 function testkeys() {
 timer0=timer1;timer1=timer();
@@ -212,30 +221,41 @@ if (tkey>(timer1-3000)){
     //left=37,up=38,right=39,down=40,pageup=33,pagedown=34,m=77,esc=27,h=72
     if (keys[72]) {subhelp();keys[72]=0;}
 	//if (keys[27]) {document.location.href="http://chungswebsite.blogspot.fr/p/exit.html";}
-    if (keys[77]) {keys[77]=0;if(tmap==0){showmap();}else{o10=o1+1;};}
+    if (keys[vk_n]){subzoom();keys[vk_n]=0;}
+	if (keys[vk_b]){subzoomout();keys[vk_b]=0;}
+	if (keys[77]) {keys[77]=0;if(tmap==0){showmap();}else{o10=o1+1;};}
     if (keys[33]) {o2+=dt*0.01;if(o2>80){o2=80;};}
     if (keys[34]) {o2-=dt*0.01;if(o2<-80){o2=-80;};}
     if (keys[37]) {o1+=dt*0.014;}
     if (keys[39]) {o1-=dt*0.014;}
+	var testzoom=0;
+	x000=x00;y000=y00;x00=x0;y00=y0;
     if(keys0[38]==1){
 	  if (keys[38]) {if(timer1<(trun+2800)){vrun=1.3;}else{vrun=1;};trun=timer1;
                      document.getElementById('intext').value="lat="+lat1+"   log="+log1+"   o1="+o1;
-	                 x-=vrun*Math.cos(o1*3.1416/180);y+=vrun*Math.sin(o1*3.1416/180);keys0[38]=2;}
-    }
+	                 x-=vrun*Math.cos(o1*3.1416/180);y+=vrun*Math.sin(o1*3.1416/180);keys0[38]=2;
+					 testzoom=1;
+    }}
 	if(keys0[40]==1){
 	  if (keys[40]) {trun=0;vrun=1;
-	                 x+=Math.cos(o1*3.1416/180);y-=Math.sin(o1*3.1416/180);keys0[40]=2;}
-	}
+	                 x+=Math.cos(o1*3.1416/180);y-=Math.sin(o1*3.1416/180);keys0[40]=2;
+					 testzoom=2;
+	}}
 	if(o1>180){o1-=360;}
 	if(o1<-180){o1+=360;}
 	if(Math.abs(x-x0)>0.00001 || Math.abs(y-y0)>0.00001){
-		tmap=-1;o2=0;
+		tmap=-1;if(zoom0<1.001 && zoom<1.001 && zoom00<1.001){o2=0;};zoom00=zoom0;zoom0=zoom;
 		tback+=1;if(tback>=10){tback=0;
 			iback+=1;if(iback>=10000){iback=10000;};
 	        o1back[iback]=o1;xback[iback]=x;yback[iback]=y;}
-		}    				   
+		}else{testzoom=0;}    				   
 	if(Math.abs(o1-o10)>0.01 || Math.abs(x-x0)>0.00001 || Math.abs(y-y0)>0.00001 || Math.abs(o2-o20)>0.01){
 	   o10=o1;x0=x;y0=y;o20=o2;update();
+	   if(testzoom>=1){var cos1=Math.cos(o1*3.1416/180),sin1=Math.sin(o1*3.1416/180);
+	                   var dist=-(x-x00)*cos1+(y-y00)*sin1;auxvar=dist;
+	                   if(dist<-0.1 && testzoom==1){subzoom();x=x00;y=y00;x0=x000;y0=y000;}
+					   else if(zoom>1.001){zoom=1;subcssscale();}
+					   }
 	}
 /*	tpano0=tpano;tpano=panorama.getPano();
 	if(tpano!=tpano0){
@@ -317,7 +337,9 @@ document.getElementById('intext').focus();
 window.scrollTo(0,0);
 tcenter+=1;if(tcenter>30){tcenter=0;setpanoidpos();}
 }
+var x0=0,y0=0,x00=0,y00=0,x000=0,y000=0;
 function update(){
+  x0=x;y0=y;
   var kx=1.0/(0.01+Math.cos(lat1*3.1416/180));
   lat1=lat+y*0.00014; log1=log-kx*x*0.00014;
   if(lat1>85){lat1=85;y=(lat1-lat)/0.00014;}
@@ -342,6 +364,12 @@ function update(){
 	 if((panoid!=panoid0) && (dist<3)){panoidx=x;panoidy=y;panoidx0=x;panoidy0=y;}
 	 if((panoid!=panoid0) && (dist>4)){panoidx=x;panoidy=y;}
 	 if((dist>1.7) && (dist<=4)){x=panoidx;y=panoidy;}
+	 /*if(panoid!=panoid0){
+		if(zoom>1.001){zoom=1;subcssscale();}
+	 }else{ 
+	    if(keys[vk_up]){keys[vk_n]=1;}
+		else if(keys[vk_down]){keys[vk_b]=1;}
+	 }*/
 	}
 	tmap=0;
 
@@ -371,6 +399,7 @@ if (status == google.maps.StreetViewStatus.OK) {
   myposition=data.location.latLng;
   tmap=2;
   lat1=myposition.lat();log1=myposition.lng();
+  latsave=lat1;logsave=log1;
   var kx=1.0/(0.01+Math.cos(lat1*3.1416/180));
   y=(lat1-lat)/0.00014;x=(log-log1)/(kx*0.00014);
   update();
@@ -379,6 +408,7 @@ if (status == google.maps.StreetViewStatus.OK) {
 function update2(){
   tmap=1;
   lat1=myposition.lat();log1=myposition.lng();
+  latsave=lat1;logsave=log1;
   var kx=1.0/(0.01+Math.cos(lat1*3.1416/180));
   y=(lat1-lat)/0.00014;x=(log-log1)/(kx*0.00014);
   update();
@@ -440,6 +470,35 @@ if (geolocation.length>0){
 }
 document.getElementById('intext').focus();
 }
+var zoom=1,zoom0=1,zoom00=1;
+var canvas=document.getElementById("canvas");
+function subzoom(){if(zoom<3.99){zoom=Math.min(4,zoom+0.6);subcssscale();}}
+function subzoomout(){if(zoom>1.01){zoom=Math.max(1,zoom-0.6);subcssscale();}}
+function subcssscale(){
+var width0  = window.innerWidth-20;
+var height0 = window.innerHeight-46;
+var width=width0*zoom;
+var height=height0*zoom;
+var cssscale=width/width0;
+var cssscaley=height/height0;
+var cssscale1=width0/width;
+var cssscaley1=height0/height;
+var x0=parseInt(height0/2);
+var y0=parseInt(height0/2);
+document.getElementById("canvas").setAttribute("style",
+ "border: none;top:0px;left:0px;"+
+ "-ms-transform: scale("+cssscale1+","+cssscaley1+");"+
+ " /* IE 9 */-webkit-transform: scale("+cssscale+","+cssscaley+");"+
+ " /* Chrome, Safari, Opera */transform: scale("+cssscale+","+cssscaley+");"+
+ "-ms-transform-origin: "+x0+" "+y0+";"+
+ "-webkit-transform-origin: "+x0+" "+y0+";"+
+ "transform-origin: "+x0+" "+y0+";");
+ 
+if (auxvar==null){document.getElementById('intext').value="lat="+lat1+"   log="+log1+"   o1="+o1;}
+else {document.getElementById('intext').value="lat="+lat1+"   log="+log1+"   o1="+o1+"  aux="+auxvar;}
+document.getElementById('intext').focus();
+}
+
 google.maps.event.addDomListener(window, 'load', initialize);
 //alert("ok");
 document.getElementById('intext').focus();
